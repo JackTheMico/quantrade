@@ -11,9 +11,10 @@
 
     Date:             2021-09-21-13:12:56
 
-    Version:          v1.0
+    Version:          v1.1
 
     Lastmodified:     2021-09-21-13:12:56 by Jack Deng
+    Lastmodified:     2021-12-19-20:54:06 by Jack Deng
 
 -------------------------------------------------
 """
@@ -55,16 +56,17 @@ def parse_dept(dept):
     return res
 
 
-def make_msg(data, delta):
-    days = delta.days
-    info = parse_dept(data)
-    msg = "".join([f"##  {k}: {v}\n\n" for k, v in info.items()])
-    if -3 <= days < 0:
+def make_msg(dlist, delta):
+    days = abs(delta.days)
+    infos = [parse_dept(data) for data in dlist]
+    msgs = ["".join([f"##  {k}: {v}\n\n" for k, v in info.items()]) for info in infos]
+    msg = "\n".join(msgs)
+    if 0 < days <= 3:
         title = f"还有{int(days)}天即可打新债"
     elif days == 0:
         title = f"今天即可打新债"
     else:
-        title = f"无新债可打"
+        title = f"暂无新债可打"
         msg = ""
     return title, msg
 
@@ -74,14 +76,11 @@ def main():
     target = re.search(r'var\s+pagedata=\s+(.*);', res.text).group(1)
     json_res = json.loads(target)
     data = json_res['list']['result']['data']
-    newest = data[0]
-    start_date_str = newest['PUBLIC_START_DATE']
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%d %H:%M:%S") 
+    newest_ten = data[0:10]
     now_date = datetime.now()
-    delta = now_date - start_date
-    # debug
-    # delta = start_date - start_date
-    title, msg = make_msg(newest, delta)
+    tar_list = list(filter(lambda x: (now_date - datetime.strptime(x['PUBLIC_START_DATE'], "%Y-%m-%d %H:%M:%S")).days <= -3, newest_ten))
+    delta = min([abs(now_date - datetime.strptime(x['PUBLIC_START_DATE'], "%Y-%m-%d %H:%M:%S")) for x in tar_list])
+    title, msg = make_msg(tar_list, delta)
     notify(title, msg)
 
 
